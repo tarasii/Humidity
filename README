@@ -1,8 +1,8 @@
-DHT22 TO RS232 converter
+DHT22 to RS232 converter
 
-Use STM32L-DISCOVERY board to tranfer data from DHT22 digital themperature and humidity sensor to RS232 serial interface
+Use STM32L-DISCOVERY board to transfer data from DHT22 digital temperature and humidity sensor to RS232 serial interface.
 
 Pin out:
-PA9 	- RXD
-PA10 	- TXD
-PA5	- DHT22
+PA9 	- RXD;
+PA10 	- TXD;
+PA5	- DHT22.
