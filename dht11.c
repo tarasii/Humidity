@@ -82,3 +82,18 @@ uint8_t read_DHT11(uint8_t *buf){
 	//return check_sum;
 }
 
+float Humidity_DHT22(uint8_t *buf){
+	float res;
+	res = buf[0] * 256 + buf[1];
+	res /= 10.0;
+	return res;
+}
+
+float Temperature_DHT22(uint8_t *buf){
+	float res;
+	res = (buf[2] & 0x7F)* 256 + buf[3];
+  res /= 10.0;
+  if (buf[2] & 0x80) res *= -1;
+	return res;
+}
+

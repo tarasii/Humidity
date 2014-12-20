@@ -17,5 +17,7 @@
 
 /* Exported functions ------------------------------------------------------- */
 uint8_t read_DHT11(uint8_t *buf);
+float Humidity_DHT22(uint8_t *buf);
+float Temperature_DHT22(uint8_t *buf);
 
 #endif /* __DHT11_H */

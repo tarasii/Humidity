@@ -69,6 +69,8 @@ int main(void){
 	
 	Init_GPIOs();
 			
+	USART_open(USART1,9600);
+
 	configureDMA();
 	
 	configureADC_Temp();	
@@ -101,16 +103,9 @@ int main(void){
 
 
 		read_DHT11(dhtbuf);
-		
-		humidity = dhtbuf[0] * 256 + dhtbuf[1];
-		humidity /= 10.0;
+		humidity = Humidity_DHT22(dhtbuf);
+		temperature = Temperature_DHT22(dhtbuf);
 
-		temperature = (dhtbuf[2] & 0x7F)* 256 + dhtbuf[3];
-    temperature /= 10.0;
-    if (dhtbuf[2] & 0x80)  temperature *= -1;
-
-				//sprintf(strDisp, "T_DHT=%2.1fC;\n\r", temperature);				
-				//USART_DMA(strDisp, strlen(strDisp));		
 
 		if (USART_GetFlagStatus(USART1, USART_FLAG_RXNE)==SET)
 		{
@@ -119,34 +114,34 @@ int main(void){
 			if (rd == 122) 
 			{				
 				sprintf(strDisp, "begin;%2.2f;%2d;%2.1f;", voltage_V, temperature_C, temperature);				
-				USART_DMA(strDisp, strlen(strDisp));		
+				USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));		
 				//sprintf(strDisp, "%d.%d;%d.%d;", dhtbuf[2], dhtbuf[3], dhtbuf[0], dhtbuf[1]);				
-				//USART_DMA(strDisp, strlen(strDisp));		
+				//USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));		
 				sprintf(strDisp, "%2.1f;end\n\r", humidity);				
-				USART_DMA(strDisp, strlen(strDisp));
+				USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));
 			}
 			else
 			{
 				sprintf(strDisp, "UART=%d;\n\r", rd);		
-				USART_DMA(strDisp, strlen(strDisp));
+				USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));
 				sprintf(strDisp, "V_ref_RAW=%d;\n\r", refAVG);		
-				USART_DMA(strDisp, strlen(strDisp));
+				USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));
 				sprintf(strDisp, "Vref=%2.2fV;\n\r", voltage_V);				
-				USART_DMA(strDisp, strlen(strDisp));
+				USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));
 				sprintf(strDisp, "T_core_RAW=%d;\n\r", tempAVG);		
-				USART_DMA(strDisp, strlen(strDisp));
+				USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));
 				sprintf(strDisp, "Tcore=%2dC;\n\r", temperature_C);				
-				USART_DMA(strDisp, strlen(strDisp));
+				USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));
 				//sprintf(strDisp, "t_dht=%2d.%dC;", dhtbuf[2], dhtbuf[3]);				
-				//USART_DMA(strDisp, strlen(strDisp));
+				//USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));
 				//sprintf(strDisp, "RH_dht=%2d.%d%%;", dhtbuf[0], dhtbuf[1]);				
-				//USART_DMA(strDisp, strlen(strDisp));
+				//USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));
 				sprintf(strDisp, "DHT_RAW=%02x%02x%02x%02x%02x;\n\r", dhtbuf[0], dhtbuf[1], dhtbuf[2], dhtbuf[3], dhtbuf[4]);				
-				USART_DMA(strDisp, strlen(strDisp));
+				USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));
 				sprintf(strDisp, "T_DHT=%2.1fC;\n\r", temperature);				
-				USART_DMA(strDisp, strlen(strDisp));		
+				USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));		
 				sprintf(strDisp, "H_DHT=%2.1f%%.\n\r", humidity);				
-				USART_DMA(strDisp, strlen(strDisp));
+				USART_DMA_send(USART1, DMA1_Channel4, strDisp, strlen(strDisp));
 			}				
 			}
 			
@@ -193,47 +188,6 @@ int main(void){
 }
 
 
-void USART_DMA(char *buf, uint8_t len){
-	//
-	DMA_InitTypeDef DMA_InitStructure;
-	
-	// DMA на запись
-	DMA_DeInit(DMA1_Channel4);
-	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) &(USART1->DR);
-	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t) buf;
-	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
-	DMA_InitStructure.DMA_BufferSize = len;
-	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-	DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-	DMA_InitStructure.DMA_Priority = DMA_Priority_Low;
-	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
-	DMA_Init(DMA1_Channel4, &DMA_InitStructure);
-
-	// старт цикла отправки
-	USART_ClearFlag(USART1, USART_FLAG_TC | USART_FLAG_TXE);
-	USART_DMACmd(USART1, USART_DMAReq_Tx, ENABLE);	
-	DMA_Cmd(DMA1_Channel4, ENABLE);
-	
-	// wait until transmission complite from dma  
-	while (DMA_GetFlagStatus(DMA1_FLAG_TC4) == RESET) {
-	}
-	
-	DMA_Cmd(DMA1_Channel4, DISABLE);
-	USART_DMACmd(USART1, USART_DMAReq_Tx, DISABLE);
-}
-
-void USART_print(USART_TypeDef* USARTx, char *buf, uint8_t len){
-	uint8_t i;
-	for (i=0;i<len;i++){
-		if( !buf[i] ) break;
-		USART_SendData(USARTx, buf[i]);
-		Delay(5);
-	}
-	
-}
 
 void acquireTemperatureData(void)
 {
@@ -423,7 +377,7 @@ void RCC_Configuration(void){
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 | RCC_APB1Periph_USART2 | RCC_APB1Periph_DAC, ENABLE);	
 	//RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 | RCC_APB1Periph_TIM3, ENABLE);
 	
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_SYSCFG | RCC_APB2Periph_USART1, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_SYSCFG, ENABLE);
 
 	/* Allow access to the RTC */
   PWR_RTCAccessCmd(ENABLE);
@@ -448,7 +402,7 @@ void RCC_Configuration(void){
 
 void Init_GPIOs (void){
   GPIO_InitTypeDef GPIO_InitStructure;
-	USART_InitTypeDef USART_InitStructure;
+  USART_InitTypeDef USART_InitStructure;
 	
 //   /* USER button and WakeUP button init: GPIO set in input interrupt active mode */
   EXTI_InitTypeDef EXTI_InitStructure;
@@ -535,21 +489,6 @@ void Init_GPIOs (void){
 	USART_Init(USART2, &USART_InitStructure);
 	USART_Cmd(USART2, ENABLE);
 
-	//USART1
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_40MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
-
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
-		
-  GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_USART1);
-  GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_USART1);
-
-	USART_InitStructure.USART_BaudRate = 9600;
-	USART_Init(USART1, &USART_InitStructure);
-	USART_Cmd(USART1, ENABLE);
 
 /* ADC input */
   GPIO_InitStructure.GPIO_Pin = IDD_MEASURE  ;                               
